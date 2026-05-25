@@ -12,7 +12,7 @@ moment.
 Available in English, 中文, Tamil and Bahasa Melayu, and built mobile-first so
 it works on a phone or a laptop.
 
-🔗 **Live app:** _add your Streamlit Cloud link here after deploying_
+🔗 **Live app:** https://weather-or-not-csn4l5bvl6evcbpwemfkrf.streamlit.app/
 
 ## Why this exists
 
