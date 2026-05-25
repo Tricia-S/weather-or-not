@@ -25,25 +25,28 @@ and **haze**, and they don't always show up in a plain "is it raining?" check:
 - During haze episodes, a **PSI above 100 is "unhealthy,"** and NEA advises
   cutting back on outdoor activity.
 
-So instead of just showing the weather, this app folds rain, heat and air
-quality into one decision.
+So instead of just showing the weather, this app folds rain, temperature and air
+quality into one decision, while also displaying humidity as additional comfort
+context.
 
 ## What it shows
 
 | Factor | Source | What it answers |
 |--------|--------|-----------------|
 | 🌧️ **Rain** | 2-hour weather forecast | Will I get wet if I leave now? |
-| 🔥 **Heat** | Air temperature + humidity → feels-like heat index | Is it uncomfortably / dangerously hot? |
+| 🌡️ **Temperature** | Live air temperature | Is it unusually hot now? |
+| 💧 **Humidity** | Live relative humidity | How humid or sticky will it feel outdoors? |
 | 😷 **Haze** | Live 1-hour PM2.5 (24-hour PSI as next-day context) | Is the air safe right now? |
 
-The worst of the three drives the headline verdict. Below it, a **24-hour
-timeline** lays out each upcoming forecast block (morning / afternoon / evening
-/ night) colour-coded by rain risk, with the first clear block starred as the
-**best window** — that's what turns this from a dashboard into a decision. A
-live map then shows a dot for every NEA area across the island, each coloured by
-the same rain + heat + haze verdict (so green means genuinely pleasant, not just
-dry), with your selected area ringed. The verdict auto-refreshes every few
-minutes.
+TThe headline verdict is driven by rain, temperature and air quality, while
+humidity is displayed separately as additional context for outdoor comfort. 
+Below it, a **24-hour timeline** lays out each upcoming forecast block 
+(morning / afternoon / evening / night) colour-coded by rain risk, with 
+the first clear block starred as the **best window** — that's what turns this 
+from a dashboard into a decision. A live map then shows a dot for every NEA 
+area across the island, each coloured by the same rain + temperature + haze verdict 
+(so green means genuinely pleasant, not just dry), with your selected area ringed. 
+The verdict auto-refreshes every few minutes.
 
 ## Design note: live data, no stored files
 
@@ -74,7 +77,7 @@ Then open http://localhost:8501.
 
 ## Built so far
 
-- [x] **Now verdict** — rain + heat + haze rolled into one go / caution / stay-in call.
+- [x] **Now verdict** — rain + temperature + haze rolled into one go / caution / stay-in call.
 - [x] **24-hour walk-window timeline** — see when the better windows are, not just now.
 - [x] **Multi-language** — English / 中文 / Tamil / Bahasa Melayu.
 - [x] **Auto-refresh** — the verdict keeps itself current.
@@ -89,11 +92,6 @@ Then open http://localhost:8501.
       what actually happened, to show how reliable the prediction was.
 - [ ] **Saved areas & alerts** — remember frequent spots and notify when a good
       window opens.
-
-> **A note on heat:** the heat metric is a *feels-like* heat index from
-> temperature and humidity, not NEA's official WBGT (which needs sun and wind
-> data the open API doesn't publish). Treat the heat thresholds as approximate
-> and calibrate them against NEA's Heat Stress Advisory if you need precision.
 
 ## Data attribution
 
