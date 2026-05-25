@@ -26,7 +26,8 @@ TR = {
         "your_area": "Your area", "now_in": "Right now in {area}",
         "good": "🟢 Good to go", "caution": "🟠 Go with caution",
         "stay": "🔴 Stay in",
-        "rain": "🌧️ Rain (next 2h)", "heat": "🔥 Heat (feels-like)",
+        "rain": "🌧️ Rain (next 2h)", "heat": "🔥 Feels-like",
+        "humidity": "💧 Humidity", "actual": "actual",
         "haze": "😷 Haze — live PM2.5 ({region})",
         "timeline": "📅 Next 24 hours", "best": "Best window",
         "today": "Today", "tomorrow": "Tomorrow", "now": "Now", "later": "Later",
@@ -46,6 +47,7 @@ TR = {
         "good": "🟢 适合出门", "caution": "🟠 谨慎出门",
         "stay": "🔴 留在室内",
         "rain": "🌧️ 降雨（未来2小时）", "heat": "🔥 体感温度",
+        "humidity": "💧 湿度", "actual": "实际",
         "haze": "😷 烟霾 — 实时 PM2.5（{region}）",
         "timeline": "📅 未来24小时", "best": "最佳时段",
         "today": "今天", "tomorrow": "明天", "now": "现在", "later": "稍后",
@@ -65,6 +67,7 @@ TR = {
         "good": "🟢 செல்லலாம்", "caution": "🟠 கவனமாக செல்லவும்",
         "stay": "🔴 உள்ளே இருங்கள்",
         "rain": "🌧️ மழை (அடுத்த 2 மணி)", "heat": "🔥 உணரும் வெப்பம்",
+        "humidity": "💧 ஈரப்பதம்", "actual": "உண்மை",
         "haze": "😷 புகைமூட்டம் — PM2.5 ({region})",
         "timeline": "📅 அடுத்த 24 மணி", "best": "சிறந்த நேரம்",
         "today": "இன்று", "tomorrow": "நாளை", "now": "இப்போது", "later": "பின்னர்",
@@ -84,6 +87,7 @@ TR = {
         "good": "🟢 Boleh keluar", "caution": "🟠 Keluar dengan berhati-hati",
         "stay": "🔴 Duduk di dalam",
         "rain": "🌧️ Hujan (2 jam akan datang)", "heat": "🔥 Suhu terasa",
+        "humidity": "💧 Kelembapan", "actual": "sebenar",
         "haze": "😷 Jerebu — PM2.5 langsung ({region})",
         "timeline": "📅 24 jam akan datang", "best": "Masa terbaik",
         "today": "Hari ini", "tomorrow": "Esok", "now": "Sekarang", "later": "Kemudian",
@@ -266,6 +270,14 @@ def heat_status(feels, lang):
     if feels < 39:     return "warn", f"{feels}°C — {T(lang,'warn_heat')}"
     return "bad", f"{feels}°C — {T(lang,'danger_heat')}"
 
+def humidity_status(rh):
+    """Display-only band for the humidity card (not part of the verdict —
+    its effect is already captured in the feels-like temperature)."""
+    if rh is None:  return "unknown"
+    if rh < 70:     return "good"
+    if rh <= 85:    return "warn"
+    return "bad"
+
 def haze_status(pm, lang):
     if pm is None:     return "unknown", T(lang, "no_data")
     if pm <= 55:       return "good", f"{T(lang,'normal')} ({pm} µg/m³)"
@@ -308,13 +320,15 @@ area = st.sidebar.selectbox(T(lang, "your_area"), names, key="area")
 
 info = areas[area]
 region = area_to_region(info["lat"], info["lon"])
-feels = heat_index_c(nearest_value(temp, info["lat"], info["lon"]),
-                     nearest_value(hum, info["lat"], info["lon"]))
+temp_c = nearest_value(temp, info["lat"], info["lon"])
+rh = nearest_value(hum, info["lat"], info["lon"])
+feels = heat_index_c(temp_c, rh)
 now = datetime.now(SGT)
 
 r_stat, r_msg = rain_status(info["forecast"])
-h_stat, h_msg = heat_status(feels, lang)
+h_stat = heat_status(feels, lang)[0]
 z_stat, z_msg = haze_status(pm25_for_region(pm, region), lang)
+# Humidity is shown but NOT in the verdict — feels-like already accounts for it.
 verdict, vcolor = overall_verdict([r_stat, h_stat, z_stat], lang)
 
 # --- NOW verdict ---
@@ -326,19 +340,36 @@ st.markdown(
         {T(lang,'now_in',area=area)}</div></div>""",
     unsafe_allow_html=True)
 
-def card(col, title, value, status):
+def card(col, title, value, status, sub=""):
+    sub_html = (f'<div style="font-size:13px;color:gray;margin-top:3px;">{sub}</div>'
+                if sub else "")
     col.markdown(
         f"""<div style="border:2px solid {COLORS[status]};border-radius:10px;
-            padding:14px;text-align:center;min-height:96px;">
+            padding:14px;text-align:center;min-height:104px;">
             <div style="font-size:14px;color:gray;">{title}</div>
             <div style="font-size:22px;font-weight:700;color:{COLORS[status]};">
-            {value}</div></div>""",
+            {value}</div>{sub_html}</div>""",
         unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns(3)
+# Feels-like card: feels-like temp big, actual temp small underneath
+if feels is None:
+    feels_val, feels_sub = T(lang, "no_data"), ""
+else:
+    word = {"warn": T(lang, "warn_heat"),
+            "bad": T(lang, "danger_heat")}.get(h_stat, "")
+    feels_val = f"{feels}°C" + (f" — {word}" if word else "")
+    feels_sub = (f"{T(lang,'actual')} {round(temp_c, 1)}°C"
+                 if temp_c is not None else "")
+
+# Humidity card
+hum_stat = humidity_status(rh)
+hum_val = f"{round(rh)}%" if rh is not None else T(lang, "no_data")
+
+c1, c2, c3, c4 = st.columns(4)
 card(c1, T(lang, "rain"), r_msg, r_stat)
-card(c2, T(lang, "heat"), h_msg, h_stat)
-card(c3, T(lang, "haze", region=region), z_msg, z_stat)
+card(c2, T(lang, "heat"), feels_val, h_stat, sub=feels_sub)
+card(c3, T(lang, "humidity"), hum_val, hum_stat)
+card(c4, T(lang, "haze", region=region), z_msg, z_stat)
 
 psi_val = psi_for_region(psi, region)
 if psi_val is not None:
@@ -365,7 +396,7 @@ for b in blocks:
             </div>""",
         unsafe_allow_html=True)
 
-# --- Rain-forecast map: a dot for every NEA area (responsive) ---
+# --- Conditions map: a dot for every NEA area (rain + heat + haze combined) ---
 st.subheader(T(lang, "cond_map"))
 m = folium.Map(location=[1.3521, 103.8198], zoom_start=11, tiles="cartodbpositron")
 order = {"unknown": -1, "good": 0, "warn": 1, "bad": 2}
