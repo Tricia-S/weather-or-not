@@ -3,8 +3,14 @@
 *Should I go out now, or wait?*
 
 A Streamlit app that answers one everyday Singapore question — is this a good
-time to head outside? — by combining three live government data feeds into a
-single **go / caution / stay-in** verdict for any area on the island.
+time to head outside? — for any area on the island. It combines live government
+data into a **go / caution / stay-in** verdict for *right now*, plus a **24-hour
+timeline** that highlights the best upcoming window, so it can tell you *"not
+now — this evening is clear and cooler"* instead of only judging the present
+moment.
+
+Available in English, 中文, Tamil and Bahasa Melayu, and built mobile-first so
+it works on a phone or a laptop.
 
 🔗 **Live app:** _add your Streamlit Cloud link here after deploying_
 
@@ -30,8 +36,14 @@ quality into one decision.
 | 🔥 **Heat** | Air temperature + humidity → feels-like heat index | Is it uncomfortably / dangerously hot? |
 | 😷 **Haze** | Live 1-hour PM2.5 (24-hour PSI as next-day context) | Is the air safe right now? |
 
-The worst of the three drives the headline verdict, with a live PM2.5 map of
-the five regions and your selected area pinned.
+The worst of the three drives the headline verdict. Below it, a **24-hour
+timeline** lays out each upcoming forecast block (morning / afternoon / evening
+/ night) colour-coded by rain risk, with the first clear block starred as the
+**best window** — that's what turns this from a dashboard into a decision. A
+live map then shows a dot for every NEA area across the island, each coloured by
+the same rain + heat + haze verdict (so green means genuinely pleasant, not just
+dry), with your selected area ringed. The verdict auto-refreshes every few
+minutes.
 
 ## Design note: live data, no stored files
 
@@ -43,6 +55,7 @@ always current rather than a snapshot. Responses are cached briefly
 The APIs used are open and require **no API key**:
 
 - `/v1/environment/2-hour-weather-forecast`
+- `/v1/environment/24-hour-weather-forecast`
 - `/v1/environment/air-temperature`
 - `/v1/environment/relative-humidity`
 - `/v1/environment/pm25`
@@ -59,14 +72,28 @@ streamlit run app.py
 
 Then open http://localhost:8501.
 
-## Roadmap
+## Built so far
 
-- [ ] **Walk window** — use the 24-hour forecast (morning/afternoon/evening) so
-      the app can say *"wait till 5pm"*, not just judge *now*.
-- [ ] **Geolocation** — replace the area dropdown with the browser's location.
-- [ ] **Real WBGT** for heat, to match NEA's official Heat Stress Advisory.
-- [ ] **Multi-language** (EN / 中文 / Tamil / Malay).
-- [ ] **Auto-refresh** so the verdict updates itself.
+- [x] **Now verdict** — rain + heat + haze rolled into one go / caution / stay-in call.
+- [x] **24-hour walk-window timeline** — see when the better windows are, not just now.
+- [x] **Multi-language** — English / 中文 / Tamil / Bahasa Melayu.
+- [x] **Auto-refresh** — the verdict keeps itself current.
+- [x] **Mobile-friendly layout** — adapts to phone or laptop.
+
+## Ideas for later
+
+- [ ] **Finer time granularity** — the timeline blocks are as coarse as NEA's
+      24-hour forecast (morning / afternoon / evening / night); a smarter model
+      could interpolate narrower windows.
+- [ ] **Forecast-accuracy tracking** — log each forecast and compare it against
+      what actually happened, to show how reliable the prediction was.
+- [ ] **Saved areas & alerts** — remember frequent spots and notify when a good
+      window opens.
+
+> **A note on heat:** the heat metric is a *feels-like* heat index from
+> temperature and humidity, not NEA's official WBGT (which needs sun and wind
+> data the open API doesn't publish). Treat the heat thresholds as approximate
+> and calibrate them against NEA's Heat Stress Advisory if you need precision.
 
 ## Data attribution
 
