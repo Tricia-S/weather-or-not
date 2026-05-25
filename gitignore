@@ -1,0 +1,18 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Streamlit secrets (API keys etc. — never commit)
+.streamlit/secrets.toml
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
