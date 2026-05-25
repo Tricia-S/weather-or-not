@@ -26,7 +26,7 @@ TR = {
         "your_area": "Your area", "now_in": "Right now in {area}",
         "good": "🟢 Good to go", "caution": "🟠 Go with caution",
         "stay": "🔴 Stay in",
-        "rain": "🌧️ Rain (next 2h)", "heat": "🔥 Feels-like",
+        "rain": "🌧️ Rain (next 2h)", "heat": "🌡️ Temperature",
         "humidity": "💧 Humidity", "actual": "actual",
         "haze": "😷 Haze — live PM2.5 ({region})",
         "timeline": "📅 Next 24 hours", "best": "Best window",
@@ -46,7 +46,7 @@ TR = {
         "your_area": "你的地区", "now_in": "{area} 现在情况",
         "good": "🟢 适合出门", "caution": "🟠 谨慎出门",
         "stay": "🔴 留在室内",
-        "rain": "🌧️ 降雨（未来2小时）", "heat": "🔥 体感温度",
+        "rain": "🌧️ 降雨（未来2小时）", "heat": "🌡️ 温度",
         "humidity": "💧 湿度", "actual": "实际",
         "haze": "😷 烟霾 — 实时 PM2.5（{region}）",
         "timeline": "📅 未来24小时", "best": "最佳时段",
@@ -66,7 +66,7 @@ TR = {
         "your_area": "உங்கள் பகுதி", "now_in": "{area} — இப்போது",
         "good": "🟢 செல்லலாம்", "caution": "🟠 கவனமாக செல்லவும்",
         "stay": "🔴 உள்ளே இருங்கள்",
-        "rain": "🌧️ மழை (அடுத்த 2 மணி)", "heat": "🔥 உணரும் வெப்பம்",
+        "rain": "🌧️ மழை (அடுத்த 2 மணி)", "heat": "🌡️ வெப்பநிலை",
         "humidity": "💧 ஈரப்பதம்", "actual": "உண்மை",
         "haze": "😷 புகைமூட்டம் — PM2.5 ({region})",
         "timeline": "📅 அடுத்த 24 மணி", "best": "சிறந்த நேரம்",
@@ -86,7 +86,7 @@ TR = {
         "your_area": "Kawasan anda", "now_in": "Sekarang di {area}",
         "good": "🟢 Boleh keluar", "caution": "🟠 Keluar dengan berhati-hati",
         "stay": "🔴 Duduk di dalam",
-        "rain": "🌧️ Hujan (2 jam akan datang)", "heat": "🔥 Suhu terasa",
+        "rain": "🌧️ Hujan (2 jam akan datang)", "heat": "🌡️ Suhu",
         "humidity": "💧 Kelembapan", "actual": "sebenar",
         "haze": "😷 Jerebu — PM2.5 langsung ({region})",
         "timeline": "📅 24 jam akan datang", "best": "Masa terbaik",
@@ -237,25 +237,6 @@ def forecast24_blocks(j, region, lang, now):
     return blocks
 
 # --------------------------------------------------------------------------- #
-# 4. HEAT INDEX (feels-like; NWS Rothfusz, temp °C + RH %)
-# --------------------------------------------------------------------------- #
-def heat_index_c(temp_c, rh):
-    if temp_c is None or rh is None:
-        return temp_c
-    t = temp_c * 9 / 5 + 32
-    if t < 80:
-        return round(temp_c, 1)
-    hi = (-42.379 + 2.04901523 * t + 10.14333127 * rh
-          - 0.22475541 * t * rh - 0.00683783 * t * t
-          - 0.05481717 * rh * rh + 0.00122874 * t * t * rh
-          + 0.00085282 * t * rh * rh - 0.00000199 * t * t * rh * rh)
-    if rh < 13 and 80 <= t <= 112:
-        hi -= ((13 - rh) / 4) * ((17 - abs(t - 95)) / 17) ** 0.5
-    elif rh > 85 and 80 <= t <= 87:
-        hi += ((rh - 85) / 10) * ((87 - t) / 5)
-    return round((hi - 32) * 5 / 9, 1)
-
-# --------------------------------------------------------------------------- #
 # 5. CLASSIFICATION + VERDICT
 # --------------------------------------------------------------------------- #
 def rain_status(text):
@@ -264,11 +245,14 @@ def rain_status(text):
     if any(w in t for w in ["rain", "showers"]):        return "warn", text
     return "good", text
 
-def heat_status(feels, lang):
-    if feels is None:  return "unknown", T(lang, "no_data")
-    if feels < 32:     return "good", f"{feels}°C {T(lang,'feels_like')}"
-    if feels < 39:     return "warn", f"{feels}°C — {T(lang,'warn_heat')}"
-    return "bad", f"{feels}°C — {T(lang,'danger_heat')}"
+def heat_status(temp_c, lang):
+    if temp_c is None:
+        return "unknown", T(lang, "no_data")
+    if temp_c < 30:
+        return "good", f"{temp_c:.1f}°C"
+    if temp_c < 33:
+        return "warn", f"{temp_c:.1f}°C — {T(lang,'warn_heat')}"
+    return "bad", f"{temp_c:.1f}°C — {T(lang,'danger_heat')}"
 
 def humidity_status(rh):
     """Display-only band for the humidity card (not part of the verdict —
@@ -322,11 +306,10 @@ info = areas[area]
 region = area_to_region(info["lat"], info["lon"])
 temp_c = nearest_value(temp, info["lat"], info["lon"])
 rh = nearest_value(hum, info["lat"], info["lon"])
-feels = heat_index_c(temp_c, rh)
 now = datetime.now(SGT)
 
 r_stat, r_msg = rain_status(info["forecast"])
-h_stat = heat_status(feels, lang)[0]
+h_stat = heat_status(temp_c, lang)[0]
 z_stat, z_msg = haze_status(pm25_for_region(pm, region), lang)
 # Humidity is shown but NOT in the verdict — feels-like already accounts for it.
 verdict, vcolor = overall_verdict([r_stat, h_stat, z_stat], lang)
@@ -352,14 +335,8 @@ def card(col, title, value, status, sub=""):
         unsafe_allow_html=True)
 
 # Feels-like card: feels-like temp big, actual temp small underneath
-if feels is None:
-    feels_val, feels_sub = T(lang, "no_data"), ""
-else:
-    word = {"warn": T(lang, "warn_heat"),
-            "bad": T(lang, "danger_heat")}.get(h_stat, "")
-    feels_val = f"{feels}°C" + (f" — {word}" if word else "")
-    feels_sub = (f"{T(lang,'actual')} {round(temp_c, 1)}°C"
-                 if temp_c is not None else "")
+temp_stat, temp_val = heat_status(temp_c, lang)
+
 
 # Humidity card
 hum_stat = humidity_status(rh)
@@ -367,7 +344,7 @@ hum_val = f"{round(rh)}%" if rh is not None else T(lang, "no_data")
 
 c1, c2, c3, c4 = st.columns(4)
 card(c1, T(lang, "rain"), r_msg, r_stat)
-card(c2, T(lang, "heat"), feels_val, h_stat, sub=feels_sub)
+card(c2, T(lang, "heat"), temp_val, temp_stat)
 card(c3, T(lang, "humidity"), hum_val, hum_stat)
 card(c4, T(lang, "haze", region=region), z_msg, z_stat)
 
@@ -404,9 +381,8 @@ for aname, ainfo in areas.items():
     if ainfo["lat"] is None:
         continue
     a_rain = rain_status(ainfo["forecast"])[0]
-    a_feels = heat_index_c(nearest_value(temp, ainfo["lat"], ainfo["lon"]),
-                           nearest_value(hum, ainfo["lat"], ainfo["lon"]))
-    a_heat = heat_status(a_feels, lang)[0]
+    a_temp = nearest_value(temp, ainfo["lat"], ainfo["lon"])
+    a_heat = heat_status(a_temp, lang)[0]
     a_haze = haze_status(
         pm25_for_region(pm, area_to_region(ainfo["lat"], ainfo["lon"])), lang)[0]
     worst = max((a_rain, a_heat, a_haze), key=lambda s: order[s])
@@ -418,7 +394,7 @@ for aname, ainfo in areas.items():
         color="#1f6fd6" if is_me else color,      # blue ring on your area
         weight=4 if is_me else 1,
         fill=True, fill_color=color, fill_opacity=0.85,
-        popup=f"{aname}: {ainfo['forecast']}, {a_feels}°C",
+        popup=f"{aname}: {ainfo['forecast']}, {a_temp}°C",
     ).add_to(m)
 st_folium(m, height=420, use_container_width=True, returned_objects=[])
 
